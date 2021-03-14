@@ -1,0 +1,1 @@
+# woo-product-image

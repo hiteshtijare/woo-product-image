@@ -62,11 +62,12 @@ function Refresh_Assign_Image(the_id){
          url : ajaxurl,
          data : data,
          success: function(response) {
-            if(response.success === true) {
-                jQuery('#woo_plugin-preview-image').replaceWith( response.data.image );
+         if(response) {
+                jQuery('#product_response').html(response);
             }
             else {
-               alert("Your vote could not be added")
+               jQuery('#product_response').html('');
+               alert("Might be some problem with Uploaded Image Name.");
             }
          }
       })   

@@ -45,6 +45,13 @@ function woo_plugin_admin_scripts() {
 
 add_action('admin_print_scripts', 'woo_plugin_admin_scripts');
 
+/*Add css for page */
+function woo_plugin_admin_style() {
+	wp_enqueue_style( 'plugin_style', plugins_url( '/css/pluginstyle.css' , __FILE__ ), array(), '0.1' );
+}
+
+add_action('admin_print_scripts', 'woo_plugin_admin_style');
+
 /*Plugin Image upload page*/
 function image_upload_page_init(){
  echo "<h1>Upload Woocommerce Product Image</h1>";
@@ -62,11 +69,13 @@ function image_upload_page_init(){
  <input type="hidden" name="woo_plugin_image_id" id="woo_plugin_image_id" value=""  />
  <input type="button" class="button-primary" value="Upload/Select Images" id="woo_plugin_media_manager"/>
  ';
+ echo '<div id="product_response"></div>';
  }
 
 add_action('wp_ajax_woo_plugin_set_image','woo_plugin_set_image');
 function woo_plugin_set_image()
 {
+	$response='';
 	 if(isset($_POST["id"]) && !empty($_POST["id"]))
 	 {
 	 	$post_ids=explode(",",$_POST["id"]);
@@ -102,12 +111,30 @@ function woo_plugin_set_image()
 						}
 						if($product_id)
 						{
-							update_metadata('post',$product_id,$image_type,$attachment_ids);
+							$log=update_metadata('post',$product_id,$image_type,$attachment_ids);
+							if($log)
+							{
+								if($image_type=="_thumbnail_id")
+								{
+									$response.=" <div class='list'>* Main Product Image Uploaded for Product Id -".$product_id."<br></div>";
+								}else{
+									$response.=" <div class='list'>* Product Gallery Image Uploaded for Product Id -".$product_id."<br></div>";
+								}
+							}else{
+								if($image_type=="_thumbnail_id")
+								{
+									$response.=" <div class='list'>* Main Product Image Already Present for Product Id -".$product_id."<br></div>";
+								}else{
+									$response.=" <div class='list'>* Product Gallery Image Already Present for Product Id -".$product_id."<br></div>";
+								}
+							}
 						}	
 				}
 			 }
 
  		}
+ 		echo json_encode($response);
+		exit();
 	}
 }
 

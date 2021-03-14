@@ -28,6 +28,7 @@ jQuery(document).ready( function($) {
                           });
                           var ids = gallery_ids.join(",");
                           jQuery('input#woo_plugin_image_id').val(ids);
+                          Refresh_Assign_Image(ids);
                        });
 
                       image_frame.on('open',function() {
@@ -48,3 +49,25 @@ jQuery(document).ready( function($) {
 
 });
 
+// Ajax request to refresh and assign image
+function Refresh_Assign_Image(the_id){
+        var data = {
+            action: 'woo_plugin_set_image',
+            id: the_id
+        };
+
+        jQuery.ajax({
+         type : "post",
+         dataType : "json",
+         url : ajaxurl,
+         data : data,
+         success: function(response) {
+            if(response.success === true) {
+                jQuery('#woo_plugin-preview-image').replaceWith( response.data.image );
+            }
+            else {
+               alert("Your vote could not be added")
+            }
+         }
+      })   
+}

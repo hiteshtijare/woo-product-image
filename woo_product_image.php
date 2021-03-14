@@ -64,5 +64,52 @@ function image_upload_page_init(){
  ';
  }
 
+add_action('wp_ajax_woo_plugin_set_image','woo_plugin_set_image');
+function woo_plugin_set_image()
+{
+	 if(isset($_POST["id"]) && !empty($_POST["id"]))
+	 {
+	 	$post_ids=explode(",",$_POST["id"]);
+	 	if(isset($post_ids))
+	 	{
+	 		foreach ($post_ids as $key => $post_id)
+	 		{
+			  $attachment_info = get_post($post_id);
+				if($attachment_info)
+				{
+					global $wpdb;
+						if(strpos($attachment_info->post_title,"_") !== false)
+						{
+							$posttitle=substr($attachment_info->post_title,0,strpos($attachment_info->post_title,'_'));
+							$image_type="_product_image_gallery";
+							$product_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_sku' AND meta_value='%s' LIMIT 1", $posttitle ) );
+							$exattachment_ids = get_post_meta($product_id,$image_type, true );
+							if(isset($exattachment_ids) && !empty($exattachment_ids)) 
+							{	
+								$attpost_ids=explode(",",$exattachment_ids);
+								array_push($attpost_ids,$attachment_info->ID);
+								$attpost_ids=array_unique($attpost_ids);
+								$attpost_ids=implode(",",$attpost_ids);
+								$attachment_ids=$attpost_ids;
+							}else{
+								$attachment_ids=$attachment_info->ID;
+							}
+						}else{
+							$posttitle=$attachment_info->post_title;
+							$image_type="_thumbnail_id";
+							$attachment_ids=$attachment_info->ID;
+							$product_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_sku' AND meta_value='%s' LIMIT 1", $posttitle ) );
+						}
+						if($product_id)
+						{
+							update_metadata('post',$product_id,$image_type,$attachment_ids);
+						}	
+				}
+			 }
+
+ 		}
+	}
+}
+
 }
 ?>

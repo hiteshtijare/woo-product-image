@@ -39,7 +39,7 @@ function image_upload_page(){
 
 /*Add Media js and Media gallery */
 function woo_plugin_admin_scripts() {
-	wp_enqueue_media();
+	//wp_enqueue_media();
     wp_enqueue_script( 'plugin_script', plugins_url( '/js/pluginscript.js' , __FILE__ ), array('jquery'), '0.1' );
 }
 
@@ -63,33 +63,46 @@ function image_upload_page_init(){
 <li>* Main image name should be like 12345.jpg.</li>
 <li>* Additional gallery product images name should be like 12345_1.jpg,
 12345_2.jpg, 12345_3.jpg etc...</li>
- </ul>";
- 
- echo '
- <input type="hidden" name="woo_plugin_image_id" id="woo_plugin_image_id" value=""  />
- <input type="button" class="button-primary" value="Upload/Select Images" id="woo_plugin_media_manager"/>
- ';
- echo '<div id="product_response"></div>';
- }
+ </ul>";?>
+ <form method="post" action="" enctype="multipart/form-data">
+ 	<input type="file" multiple name="woo_plugin_media_upload[]" required="" />
+ 	 <?php wp_nonce_field(); ?>
+ 	 <?php submit_button('Upload Images');?>
+ </form>
+<?php 
+woo_plugin_set_image(); 
+echo '<div id="product_response"></div>';
+}
 
-add_action('wp_ajax_woo_plugin_set_image','woo_plugin_set_image');
 function woo_plugin_set_image()
 {
 	$response='';
-	 if(isset($_POST["id"]) && !empty($_POST["id"]))
+	 if(isset($_POST["submit"]) && $_POST["submit"] == "Upload Images")
 	 {
-	 	$post_ids=explode(",",$_POST["id"]);
-	 	if(isset($post_ids))
+	 	$images=$_FILES['woo_plugin_media_upload']['name'];
+	 	if(isset($images) && !empty($images))
 	 	{
-	 		foreach ($post_ids as $key => $post_id)
-	 		{
-			  $attachment_info = get_post($post_id);
+	 		$wp_upload_dir = wp_upload_dir();
+	 		foreach ($images as $key => $image){
+	 			$sanimage=sanitize_file_name($image);
+	 			$file_type = wp_check_filetype(basename($sanimage));
+	 			$uploaded_type = $file_type['ext'];
+		        if(in_array($uploaded_type,array('png','jpg','jpeg'))) {
+			 	$upload = wp_upload_bits($_FILES['woo_plugin_media_upload']['name'][$key], null, file_get_contents($_FILES['woo_plugin_media_upload']['tmp_name'][$key]));
+$attachment = array('post_title' => basename($upload['file']), 'post_content' => '', 'post_type' => 'attachment', 'post_mime_type' => $file_type['type'], 'guid' => $upload['url']);
+			 	if(isset($upload['error']) && $upload['error'] == false) {
+			 	$attachment_id = wp_insert_attachment( $attachment,$upload["file"]);
+			 	$meta=wp_generate_attachment_metadata( $attachment_id,$upload["file"]);
+				wp_update_attachment_metadata($attachment_id,$meta);
+				$attachment_info = get_post($attachment_id);
 				if($attachment_info)
 				{
 					global $wpdb;
-						if(strpos($attachment_info->post_title,"_") !== false)
+						$title = preg_replace('/\\.[^.\\s]{3,4}$/', '', $attachment_info->post_title);
+
+						if(strpos($title,"_") !== false)
 						{
-							$posttitle=substr($attachment_info->post_title,0,strpos($attachment_info->post_title,'_'));
+							$posttitle=substr($title,0,strpos($title,'_'));
 							$image_type="_product_image_gallery";
 							$product_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_sku' AND meta_value='%s' LIMIT 1", $posttitle ) );
 							$exattachment_ids = get_post_meta($product_id,$image_type, true );
@@ -104,37 +117,25 @@ function woo_plugin_set_image()
 								$attachment_ids=$attachment_info->ID;
 							}
 						}else{
-							$posttitle=$attachment_info->post_title;
+							$posttitle=$title;
 							$image_type="_thumbnail_id";
 							$attachment_ids=$attachment_info->ID;
 							$product_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_sku' AND meta_value='%s' LIMIT 1", $posttitle ) );
-						}
-						if($product_id)
+					}
+					if($product_id)
 						{
 							$log=update_metadata('post',$product_id,$image_type,$attachment_ids);
-							if($log)
-							{
-								if($image_type=="_thumbnail_id")
-								{
-									$response.=" <div class='list'>* Main Product Image Uploaded for Product Id -".$product_id."<br></div>";
-								}else{
-									$response.=" <div class='list'>* Product Gallery Image Uploaded for Product Id -".$product_id."<br></div>";
-								}
-							}else{
-								if($image_type=="_thumbnail_id")
-								{
-									$response.=" <div class='list'>* Main Product Image Already Present for Product Id -".$product_id."<br></div>";
-								}else{
-									$response.=" <div class='list'>* Product Gallery Image Already Present for Product Id -".$product_id."<br></div>";
-								}
-							}
+							//var_dump($title);var_dump($attachment_ids);exit;
 						}	
+						
 				}
-			 }
+			 	}
+			 
+			 	}
+			}
 
- 		}
- 		echo json_encode($response);
-		exit();
+						
+		}
 	}
 }
 
